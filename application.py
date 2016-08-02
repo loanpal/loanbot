@@ -5,10 +5,10 @@ import json
 import requests
 from flask import Flask, request
 
-app = Flask(__name__)
+application = Flask(__name__)
 
 
-@app.route('/', methods=['GET'])
+@application.route('/', methods=['GET'])
 def verify():
     # when the endpoint is registered as a webhook, it must
     # return the 'hub.challenge' value in the query arguments
@@ -20,7 +20,7 @@ def verify():
     return "Hello world", 200
 
 
-@app.route('/', methods=['POST'])
+@application.route('/', methods=['POST'])
 def webook():
 
     # endpoint for processing incoming messaging events
@@ -78,9 +78,9 @@ def send_message(recipient_id, message_text):
 
 
 def log(message):  # simple wrapper for logging to stdout on heroku
-    print str(message)
+    print(str(message))
     sys.stdout.flush()
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    application.run(debug=True)
