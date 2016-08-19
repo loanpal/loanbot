@@ -4,11 +4,17 @@ import json
 
 import requests
 from flask import Flask, request
+from flask.ext.sqlalchemy import SQLAlchemy
 
-application = Flask(__name__)
+app = Flask(__name__)
+app.config.from_object(os.environ['APP_SETTINGS'])
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
 
+from models import *
+from outline import *
 
-@application.route('/', methods=['GET'])
+@app.route('/', methods=['GET'])
 def verify():
     # when the endpoint is registered as a webhook, it must
     # return the 'hub.challenge' value in the query arguments
@@ -20,7 +26,7 @@ def verify():
     return "Hello world", 200
 
 
-@application.route('/', methods=['POST'])
+@app.route('/', methods=['POST'])
 def webook():
     data = request.get_json()
     log(data)  # you may not want to log every incoming message in production, but it's good for testing
@@ -31,7 +37,8 @@ def webook():
     for entry in data["entry"]:
         for messaging_event in entry["messaging"]:
             if messaging_event.get('message'):
-              received_message(messaging_event)
+                # Handle message
+                received_message(messaging_event)
             # elif messaging_event.get('optin'):
             #   receivedAuthentication(messaging_event)
             # elif messaging_event.get('delivery'):
@@ -67,9 +74,12 @@ def received_message(event):
     time_of_message = event['timestamp']
     message = event['message']
 
-    log("Received message for user %s and page %s at %d with message:" %
-            (sender_id, recipient_id, time_of_message))
-    log(json.dumps(message));
+    # Find or Create User
+    try:
+        user = User.get(id)
+    except:
+        user = User(id=sender_id)
+        db.session.add(user)
 
     is_echo = message.get('is_echo')
     message_id = message.get('mid')
@@ -78,30 +88,67 @@ def received_message(event):
     app_id = message.get('app_id')
     metadata = message.get('metadata')
 
-    # You may get a text or attachment but not both
-    message_text = message.get('text')
-    message_attachments = message.get('attachments')
-    quick_reply = message.get('quick_reply')
-
     if is_echo:
         # Just logging message echoes to console
         log("Received echo for message %s and app %s with metadata %s" %
                 (message_id, app_id, metadata));
         return
 
-    elif quick_reply:
-        quick_reply_payload = quick_reply['payload'];
-        log("Quick reply for message %s with payload %s" %
-                (message_id, quick_reply_payload))
-        send_text_message(senderID, "Quick reply tapped");
-        return
+    # You may get a text or attachment but not both
+    message_text = message.get('text')
+    message_attachments = message.get('attachments')
+    quick_reply = message.get('quick_reply')
+
+
+    # elif quick_reply:
+    #     quick_reply_payload = quick_reply['payload'];
+    #     log("Quick reply for message %s with payload %s" %
+    #             (message_id, quick_reply_payload))
+    #     send_text_message(senderID, "Quick reply tapped");
+    #     return
 
     if message_text:
-        send_text_message(sender_id, message_text)
+        parse_text_message(user, message_text)
     elif message_attachments:
         send_text_message(sender_id, "Message with attachment received")
     else:
         log("Invalid message")
+
+def parse_text_message(user, message_text):
+    current_step = get_current_step(user)
+    valid_input = validate_and_save(user, current_step, message_text)
+    if valid_input:
+        next_step = get_next_step(current_step)
+        next_message = details[next_step]['questions'][0]  # Randomize?
+        send_text_message(user.id, next_message)
+    else:
+        repeat_message = details[current_step]['repeat_questions'][0]  # Randomize?
+        send_text_message(user.id, repeat_message)
+
+def get_current_step(user):
+    # look through steps in order
+    for step_name in order:
+        step = details[step_name]
+        validation = step['data_to_collect']  # an array of strings that are User model attibutes
+
+        # for each check to see if there is a value saved in the applicable fields
+        for attribute in validation:
+            current = getattr(user, attribute)
+            if not current:
+                # If not, return that step
+                return step_name
+
+def get_next_step(current_step):
+    index = order.index(current_step)
+    next_index = index + 1
+    return order[next_index]
+
+
+def validate_and_save(user, current_step, message_text):
+    # add validation logic
+    step_details = details[current_step]
+    data = step_details['parser'](user, message_text)  # False if isn't valid
+
 
 
 def send_text_message(recipient_id, message_text):
@@ -140,4 +187,4 @@ def log(message):  # simple wrapper for logging to stdout on heroku
 
 
 if __name__ == '__main__':
-    application.run(debug=True)
+    app.run(debug=True)
