@@ -1,5 +1,6 @@
 from utils import next_prompt, send_text_message
 from application import db
+import re
 
 def initial(user, message):
     message_text = 'What is your zipcode?'
@@ -12,9 +13,13 @@ def action(user, message):
         follow_up(user, message)
 
 def parse(user, message):
-    user.zipcode = message.get('text')
-    db.session.commit()
-    return True
+    text = message.get('text')
+    numbers_only = re.sub("[^0-9]", "", text)
+    if len(numbers_only) == 5:
+        user.zipcode = numbers_only
+        db.session.commit()
+        return True
+    return False
 
 def follow_up(user, message):
     # TODO: Customize response based on error count here

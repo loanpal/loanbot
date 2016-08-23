@@ -1,4 +1,4 @@
-import nameparser
+from nameparser import HumanName
 from utils import next_prompt, send_text_message
 from application import db
 
@@ -13,10 +13,14 @@ def action(user, message):
         follow_up(user, message)
 
 def parse(user, message):
-    user.first_name = message.get('text')
-    user.last_name = message.get('text')
-    db.session.commit()
-    return True
+    name = message.get('text')
+    parsed_name = HumanName(name)
+    if (parsed_name.first and parsed_name.last):
+        user.first_name = parsed_name.first
+        user.last_name = parsed_name.last
+        db.session.commit()
+        return True
+    return False
 
 def follow_up(user, message):
     # TODO: Customize response based on error count here

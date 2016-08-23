@@ -15,8 +15,12 @@ def action(user, message):
 
 def parse(user, message):
     response = message.get('text')
-    user.dob = parser.parse(response)
-    db.session.commit()
+    dob = parser.parse(response, fuzzy=True)
+    if dob:
+        user.dob = dob
+        db.session.commit()
+        return True
+    return False
 
 def follow_up(user, message):
     # TODO: Customize response based on error count here

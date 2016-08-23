@@ -1,5 +1,6 @@
 from utils import next_prompt, send_text_message
 from application import db
+import re
 
 def initial(user, message):
     message_text = 'What is the remaining 1st mortgage balance?'
@@ -12,8 +13,18 @@ def action(user, message):
         follow_up(user, message)
 
 def parse(user, message):
-    user.mortgage_balance = message.get('text')
-    db.session.commit()
+    text = message.get('text')
+    numbers_only = re.sub("[^0-9]", "", text)
+    pattern = 'zero|none|paid off|paid|don\'t'
+    if numbers_only:
+        user.mortgage_balance = numbers_only
+        db.session.commit()
+        return True
+    if re.match(pattern, text.lower(), flags=0):
+        user.mortgage_balance = numbers_only
+        db.session.commit()
+        return True
+    return False
 
 def follow_up(user, message):
     # TODO: Customize response based on error count here

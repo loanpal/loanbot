@@ -14,7 +14,7 @@ db = SQLAlchemy(app)
 from models import *
 from utils import next_prompt
 from prompts import prompts
-
+from utils import send_text_message
 
 @app.route('/', methods=['GET'])
 def verify():
@@ -77,6 +77,10 @@ def received_message(event):
         db.session.commit()
         send_text_message(user.id, 'Welcome to LoanPal!')
 
+    # Hack to see info REMOVE BEFORE PUBLISHING
+    if message['text'] == 'myData':
+        return printUserData(user)
+
     # Find current prompt
     current_prompt_name = user.current_prompt
     if not user.current_prompt:
@@ -89,6 +93,31 @@ def received_message(event):
         current_action(user, message or postback)
     return
 
+def printUserData(user):
+    string = ''
+    string += 'first_name: ' + str(user.first_name) +'\n'
+    string += 'last_name: ' + str(user.last_name) +'\n'
+    string += 'phone_number: ' + str(user.phone_number) +'\n'
+    string += 'property_value: ' + str(user.property_value) +'\n'
+    string += 'mortgage_balance: ' + str(user.mortgage_balance) +'\n'
+    string += 'credit_score: ' + str(user.credit_score) +'\n'
+    string += 'dob: ' + str(user.dob) +'\n'
+    string += 'is_recent_bankruptcy: ' + str(user.is_recent_bankruptcy) +'\n'
+    string += 'is_recent_foreclosure: ' + str(user.is_recent_foreclosure) +'\n'
+    string += 'street_address: ' + str(user.street_address) +'\n'
+    string += 'city: ' + str(user.city) +'\n'
+    string += 'state: ' + str(user.state) +'\n'
+    string += 'zipcode: ' + str(user.zipcode) +'\n'
+    # string += 'messages: ' + str(user.messages) +'\n'
+    # string += 'total_error_count: ' + str(user.total_error_count) +'\n'
+    # string += 'current_scope: ' + str(user.current_scope) +'\n'
+    # string += 'current_scope_eror_count: ' + str(user.current_scope_eror_count) +'\n'
+    # string += 'current_prompt: ' + str(user.current_prompt) +'\n'
+    # string += 'current_prompt_eror_count: ' + str(user.current_prompt_eror_count) +'\n'
+    # string += 'sent_to_velocify: ' + str(user.sent_to_velocify) +'\n'
+
+    send_text_message(user.id, string)
+    return
 
 if __name__ == '__main__':
     app.run(debug=True)
