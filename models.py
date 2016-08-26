@@ -21,11 +21,11 @@ class User(db.Model):
     state = db.Column(db.String())
     zipcode = db.Column(db.String())
     messages = relationship('Message', back_populates="user")
-    total_error_count = db.Column(db.Integer)
+    total_error_count = db.Column(db.Integer, default=0)
     current_scope = db.Column(db.String())
-    current_scope_eror_count = db.Column(db.Integer)
+    current_scope_eror_count = db.Column(db.Integer, default=0)
     current_prompt = db.Column(db.String())
-    current_prompt_eror_count = db.Column(db.Integer)
+    current_prompt_eror_count = db.Column(db.Integer, default=0)
     sent_to_velocify = db.Column(db.Boolean(), default=False)
 
     def __init__(self, id):

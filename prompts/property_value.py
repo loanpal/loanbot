@@ -1,4 +1,4 @@
-from utils import next_prompt, send_text_message
+from utils import next_prompt, send_text_message, check_error_threshold, increment_error_counts
 from application import db
 import re
 
@@ -10,6 +10,8 @@ def action(user, message):
     if parse(user, message):
         next_prompt(user, message)
     else:
+        check_error_threshold(user)
+        increment_error_counts(user)
         follow_up(user, message)
 
 def parse(user, message):
